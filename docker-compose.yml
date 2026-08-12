@@ -1,0 +1,11 @@
+services:
+  price-scout:
+    image: ghcr.io/fg-collectshop/fg-price-scout:latest
+    restart: unless-stopped
+    ports:
+      - "8090:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      CACHE_DB: /app/data/prices.db
+      CACHE_TTL_SECONDS: "604800"
