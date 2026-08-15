@@ -74,3 +74,37 @@ def _from_details(product_id: int) -> Optional[int]:
         return None
     logger.info("details hit id=%d price=%.2f", product_id, price)
     return int(round(float(price) * 100))
+
+
+def scrape_tcgplayer_product(product_id: int) -> Optional[dict]:
+    """Fetch full product metadata (name, set, price, product line) from TCGPlayer.
+
+    Used by the admin form to auto-fill purchase details when the user enters
+    a TCGPlayer product ID. Distinct from scrape_tcgplayer_price which only
+    returns cents (kept lean for the hourly pricesync cron).
+    """
+    url = _DETAILS_URL.format(id=product_id)
+    try:
+        resp = requests.get(url, impersonate="chrome120", headers=_HEADERS, timeout=15)
+    except Exception as e:
+        logger.error("product fetch failed id=%d: %s", product_id, e)
+        return None
+    if resp.status_code != 200:
+        logger.debug("product HTTP %d id=%d", resp.status_code, product_id)
+        return None
+    try:
+        data = resp.json()
+    except ValueError:
+        return None
+    name = data.get("productName")
+    if not name:
+        logger.warning("product no name id=%d", product_id)
+        return None
+    price = data.get("marketPrice")
+    return {
+        "product_id":         product_id,
+        "name":               name,
+        "set_name":           data.get("setName"),
+        "product_line":       data.get("productLineName"),
+        "market_price_cents": int(round(float(price) * 100)) if price else None,
+    }

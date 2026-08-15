@@ -5,7 +5,7 @@ import time
 from fastapi import FastAPI, HTTPException
 
 from cache import PriceCache
-from scraper import scrape_tcgplayer_price
+from scraper import scrape_tcgplayer_price, scrape_tcgplayer_product
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -40,3 +40,13 @@ def get_price(product_id: int):
         "fetched_at": fetched_at,
         "cached": False,
     }
+
+
+@app.get("/product/{product_id}")
+def get_product(product_id: int):
+    """Full product metadata for form auto-fill. Not cached — called on-demand
+    when a user types a TCGPlayer ID in the admin add-purchase form."""
+    data = scrape_tcgplayer_product(product_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"No product found for {product_id}")
+    return data
